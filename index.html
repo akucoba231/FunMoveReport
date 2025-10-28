@@ -151,10 +151,17 @@
       studentName.textContent = "Nama: " + namaSiswa;
 
       // Urutan kolom
-      const columns = ["timestamp", "pushup (kali)", "situp (kali)", "jumpingjack (kali)", "jogging (menit)", "lemparbola (kali)"];
+      const columns = ["timestamp", "pushup", "situp", "jumpingjack", "jogging", "lemparbola"];
 
       let tableHTML = "<table><thead><tr>";
-      columns.forEach(col => tableHTML += `<th>${col}</th>`);
+      columns.forEach(col => {
+        if(col == "jogging"){
+          tableHTML += `<th>${col} (menit)</th>`
+        }
+        else {
+          tableHTML += `<th>${col} (kali)</th>`
+        }
+      });
       tableHTML += "</tr></thead><tbody>";
 
       data.forEach(item => {
