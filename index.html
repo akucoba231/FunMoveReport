@@ -105,10 +105,10 @@
       let tgl = d.getDate();
       let bln = d.getMonth();
       bln = parseInt(bln) + 1;
-      bln = bln.toString().length == 2 ? "" : `0${bln}`;
+      bln = bln.toString().length == 2 ? `${bln}` : `0${bln}`;
       let thn = d.getFullYear();
 
-      return `${d}-${bln}-${thn}`;
+      return `${tgl}-${bln}-${thn}`;
     }
 
     // Ambil parameter "data" dari URL
