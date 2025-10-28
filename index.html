@@ -99,6 +99,18 @@
   </div>
 
   <script>
+    // ambil tanggal 
+    function getTanggal(){
+      let d = new Date();
+      let tgl = d.getDate();
+      let bln = d.getMonth();
+      bln = parseInt(bln) + 1;
+      bln = bln.toString().length == 2 ? "" : `0${bln}`;
+      let thn = d.getFullYear();
+
+      return `${d}-${bln}-${thn}`;
+    }
+
     // Ambil parameter "data" dari URL
     function getQueryParam(name) {
       const urlParams = new URLSearchParams(window.location.search);
@@ -159,6 +171,7 @@
       container.innerHTML = tableHTML;
     }
 
+
     // Export ke Excel (dengan 5 baris awal)
     function exportToExcel(data) {
       if (!data || data.length === 0) return;
@@ -190,8 +203,9 @@
       XLSX.utils.sheet_add_json(worksheet, bodyData, { origin: "A6", skipHeader: false });
 
       const workbook = XLSX.utils.book_new();
+      const getTanggal = nowDay();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Aktivitas Siswa");
-      XLSX.writeFile(workbook, `DataAktivitas_${namaSiswa}.xlsx`);
+      XLSX.writeFile(workbook, `DataAktivitas_${namaSiswa}_${getTanggal}.xlsx`);
     }
 
     // Jalankan saat halaman siap
