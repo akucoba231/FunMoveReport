@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Data Aktivitas Siswa</title>
+
+  <!-- SheetJS untuk export Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #f7f9fc;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+      padding: 20px;
+    }
+
+    h2, h3 {
+      text-align: center;
+      margin-bottom: 10px;
+      color: #333;
+    }
+
+    h3 {
+      font-weight: normal;
+      color: #555;
+      margin-top: 0;
+      margin-bottom: 20px;
+    }
+
+    #exportBtn {
+      background: #1a73e8;
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-bottom: 20px;
+      display: block;
+      margin-left: auto;
+    }
+
+    #exportBtn:hover {
+      background: #0c59cf;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px 10px;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th {
+      background: #e3e9f3;
+      font-weight: bold;
+    }
+
+    tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+
+    .no-data {
+      text-align: center;
+      color: #999;
+      padding: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h2>Data Aktivitas Siswa</h2>
+    <h3 id="studentName">Nama: -</h3>
+    <button id="exportBtn">📤 Export ke Excel</button>
+    <div class="table-wrapper">
+      <div id="tableContainer"></div>
+    </div>
+  </div>
+
+  <script>
+    // Ambil parameter "data" dari URL
+    function getQueryParam(name) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(name);
+    }
+
+    // Format timestamp: "Senin, 14/10/2025"
+    function formatTimestamp(ts) {
+      if (!ts) return "";
+      try {
+        const date = new Date(Number(ts));
+        if (isNaN(date.getTime())) return ts;
+
+        const hariList = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+        const hari = hariList[date.getDay()];
+        const dd = String(date.getDate()).padStart(2, "0");
+        const mm = String(date.getMonth() + 1).padStart(2, "0");
+        const yyyy = date.getFullYear();
+        return `${hari}, ${dd}/${mm}/${yyyy}`;
+      } catch {
+        return ts;
+      }
+    }
+
+    // Render tabel di halaman web
+    function renderTable(data) {
+      const container = document.getElementById("tableContainer");
+      const studentName = document.getElementById("studentName");
+
+      if (!data || data.length === 0) {
+        container.innerHTML = `<div class="no-data">Tidak ada data untuk ditampilkan.</div>`;
+        studentName.textContent = "Nama: -";
+        return;
+      }
+
+      // Ambil nama dari data pertama
+      const namaSiswa = data[0].nama || "-";
+      studentName.textContent = "Nama: " + namaSiswa;
+
+      // Urutan kolom
+      const columns = ["timestamp", "pushup", "situp", "jumpingjack", "jogging", "lemparbola"];
+
+      let tableHTML = "<table><thead><tr>";
+      columns.forEach(col => tableHTML += `<th>${col}</th>`);
+      tableHTML += "</tr></thead><tbody>";
+
+      data.forEach(item => {
+        tableHTML += "<tr>";
+        columns.forEach(col => {
+          let value = item[col];
+          if (col === "timestamp") value = formatTimestamp(value);
+          tableHTML += `<td>${value ?? ""}</td>`;
+        });
+        tableHTML += "</tr>";
+      });
+
+      tableHTML += "</tbody></table>";
+      container.innerHTML = tableHTML;
+    }
+
+    // Export ke Excel (dengan 5 baris awal)
+    function exportToExcel(data) {
+      if (!data || data.length === 0) return;
+
+      const namaSiswa = data[0].nama || "-";
+
+      // Baris 1-5 untuk header dan jarak
+      const headerRows = [
+        ["Data Pencapaian Aktivitas Jasmani Siswa"],
+        ["Nama: " + namaSiswa],
+        [""],
+        [""],
+        [""],
+      ];
+
+      // Data utama
+      const bodyData = data.map(d => ({
+        Tanggal: formatTimestamp(d.timestamp),
+        Pushup: d.pushup,
+        Situp: d.situp,
+        JumpingJack: d.jumpingjack,
+        Jogging: d.jogging,
+        LemparBola: d.lemparbola,
+      }));
+
+      // Gabungkan header dan data
+      const worksheet = XLSX.utils.json_to_sheet([], { skipHeader: true });
+      XLSX.utils.sheet_add_aoa(worksheet, headerRows, { origin: "A1" });
+      XLSX.utils.sheet_add_json(worksheet, bodyData, { origin: "A6", skipHeader: false });
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Aktivitas Siswa");
+      XLSX.writeFile(workbook, `DataAktivitas_${namaSiswa}.xlsx`);
+    }
+
+    // Jalankan saat halaman siap
+    window.addEventListener("DOMContentLoaded", () => {
+      const jsonString = getQueryParam("data");
+      let parsedData = [];
+
+      try {
+        if (jsonString) {
+          parsedData = JSON.parse(decodeURIComponent(jsonString));
+        }
+      } catch (e) {
+        alert("Format data tidak valid!\nPastikan JSON sudah di-encode dengan benar.");
+      }
+
+      renderTable(parsedData);
+
+      document.getElementById("exportBtn").addEventListener("click", () => {
+        if (parsedData.length === 0) {
+          alert("Tidak ada data untuk diexport!");
+          return;
+        }
+        exportToExcel(parsedData);
+      });
+    });
+  </script>
+</body>
+</html>
