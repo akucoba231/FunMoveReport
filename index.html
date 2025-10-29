@@ -15,7 +15,6 @@
       margin: 0;
       padding: 20px;
     }
-
     .container {
       max-width: 1000px;
       margin: auto;
@@ -24,20 +23,17 @@
       box-shadow: 0 3px 10px rgba(0,0,0,0.1);
       padding: 20px;
     }
-
     h2, h3 {
       text-align: center;
       margin-bottom: 10px;
       color: #333;
     }
-
     h3 {
       font-weight: normal;
       color: #555;
       margin-top: 0;
       margin-bottom: 20px;
     }
-
     #exportBtn {
       background: #1a73e8;
       color: white;
@@ -50,36 +46,29 @@
       display: block;
       margin-left: auto;
     }
-
     #exportBtn:hover {
       background: #0c59cf;
     }
-
     .table-wrapper {
       overflow-x: auto;
     }
-
     table {
       width: 100%;
       border-collapse: collapse;
     }
-
     th, td {
       border: 1px solid #ccc;
       padding: 8px 10px;
       text-align: left;
       white-space: nowrap;
     }
-
     th {
       background: #e3e9f3;
       font-weight: bold;
     }
-
     tr:nth-child(even) {
       background: #f9f9f9;
     }
-
     .no-data {
       text-align: center;
       color: #999;
@@ -103,11 +92,9 @@
     function nowDay(){
       let d = new Date();
       let tgl = d.getDate();
-      let bln = d.getMonth();
-      bln = parseInt(bln) + 1;
-      bln = bln.toString().length == 2 ? `${bln}` : `0${bln}`;
+      let bln = d.getMonth() + 1;
+      bln = bln.toString().padStart(2, "0");
       let thn = d.getFullYear();
-
       return `${tgl}-${bln}-${thn}`;
     }
 
@@ -123,7 +110,6 @@
       try {
         const date = new Date(Number(ts));
         if (isNaN(date.getTime())) return ts;
-
         const hariList = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
         const hari = hariList[date.getDay()];
         const dd = String(date.getDate()).padStart(2, "0");
@@ -148,28 +134,38 @@
 
       // Ambil nama dari data pertama
       const namaSiswa = data[0].nama || "-";
-      studentName.textContent = "Nama Siswa : " + namaSiswa;
+      const kelasSiswa = data[0].kelas || "";
+      const umurSiswa = data[0].umur || "";
+      studentName.textContent = `Nama Siswa : ${namaSiswa}${kelasSiswa ? " | Kelas: " + kelasSiswa : ""}${umurSiswa ? " | Umur: " + umurSiswa : ""}`;
 
-      // Urutan kolom
-      const columns = ["timestamp", "pushup", "situp", "jumpingjack", "jogging", "lemparbola"];
+      // Kolom tetap: semua data wajib memiliki kolom ini
+      const columns = ["timestamp", "nama", "kelas", "umur", "pushup", "situp", "jumpingjack", "jogging", "lemparbola"];
 
       let tableHTML = "<table><thead><tr>";
       columns.forEach(col => {
-        if(col == "jogging"){
-          tableHTML += `<th>${col} (menit)</th>`
-        }
-        else {
-          tableHTML += `<th>${col} (kali)</th>`
+        if (col === "timestamp") {
+          tableHTML += `<th>Tanggal</th>`;
+        } else if (col === "jogging") {
+          tableHTML += `<th>${col} (menit)</th>`;
+        } else if (col === "nama" || col === "kelas" || col === "umur") {
+          tableHTML += `<th>${col.charAt(0).toUpperCase() + col.slice(1)}</th>`;
+        } else {
+          tableHTML += `<th>${col} (kali)</th>`;
         }
       });
       tableHTML += "</tr></thead><tbody>";
 
       data.forEach(item => {
+        // Pastikan selalu punya kolom kelas & umur
+        if (item.kelas === undefined) item.kelas = "";
+        if (item.umur === undefined) item.umur = "";
+
         tableHTML += "<tr>";
         columns.forEach(col => {
           let value = item[col];
           if (col === "timestamp") value = formatTimestamp(value);
-          tableHTML += `<td>${value ?? ""}</td>`;
+          if (value === undefined || value === null) value = "";
+          tableHTML += `<td>${value}</td>`;
         });
         tableHTML += "</tr>";
       });
@@ -178,36 +174,38 @@
       container.innerHTML = tableHTML;
     }
 
-
-    // Export ke Excel (dengan 5 baris awal)
+    // Export ke Excel
     function exportToExcel(data) {
       if (!data || data.length === 0) return;
 
       const namaSiswa = data[0].nama || "-";
+      const kelasSiswa = data[0].kelas || "";
+      const umurSiswa = data[0].umur || "";
 
-      // Baris 1-5 untuk header dan jarak
       const headerRows = [
         ["Data Pencapaian Aktivitas Jasmani Siswa"],
         ["Nama: " + namaSiswa],
-        [""],
-        [""],
+        ["Kelas: " + kelasSiswa],
+        ["Umur: " + umurSiswa],
         [""],
       ];
 
-      // Data utama
+      // Pastikan semua entri punya kelas & umur
       const bodyData = data.map(d => ({
         Tanggal: formatTimestamp(d.timestamp),
-        Pushup: d.pushup,
-        Situp: d.situp,
-        JumpingJack: d.jumpingjack,
-        Jogging: d.jogging,
-        LemparBola: d.lemparbola,
+        Nama: d.nama || "",
+        Kelas: d.kelas || "",
+        Umur: d.umur || "",
+        Pushup: d.pushup ?? "",
+        Situp: d.situp ?? "",
+        JumpingJack: d.jumpingjack ?? "",
+        Jogging: d.jogging ?? "",
+        LemparBola: d.lemparbola ?? "",
       }));
 
-      // Gabungkan header dan data
       const worksheet = XLSX.utils.json_to_sheet([], { skipHeader: true });
       XLSX.utils.sheet_add_aoa(worksheet, headerRows, { origin: "A1" });
-      XLSX.utils.sheet_add_json(worksheet, bodyData, { origin: "A6", skipHeader: false });
+      XLSX.utils.sheet_add_json(worksheet, bodyData, { origin: "A7", skipHeader: false });
 
       const workbook = XLSX.utils.book_new();
       const getTanggal = nowDay();
@@ -241,3 +239,4 @@
   </script>
 </body>
 </html>
+
